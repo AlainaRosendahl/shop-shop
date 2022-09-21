@@ -1,44 +1,78 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import {
+  ApolloClient,
+  InMemoryCache,
+  ApolloProvider,
+  createHttpLink,
+} from '@apollo/client';
+import { setContext } from '@apollo/client/link/context';
+
+import Home from './pages/Home';
+import Detail from './pages/Detail';
+import NoMatch from './pages/NoMatch';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
 import Nav from './components/Nav';
-import About from './components/About';
-import Gallery from './components/Gallery';
-import ContactForm from './components/Contact';
+import { StoreProvider } from './utils/GlobalState';
+import OrderHistory from './pages/OrderHistory';
+
+const httpLink = createHttpLink({
+  uri: '/graphql',
+});
+
+const authLink = setContext((_, { headers }) => {
+  const token = localStorage.getItem('id_token');
+  return {
+    headers: {
+      ...headers,
+      authorization: token ? `Bearer ${token}` : '',
+    },
+  };
+});
+
+const client = new ApolloClient({
+  link: authLink.concat(httpLink),
+  cache: new InMemoryCache(),
+});
 
 function App() {
-  const [categories] = useState([
-    {
-      name: 'commercial',
-      description: 'Photos of grocery stores, food trucks, and other commercial projects',
-    },
-    { name: 'portraits', description: 'Portraits of people in my life' },
-    { name: 'food', description: 'Delicious delicacies' },
-    { name: 'landscape', description: 'Fields, farmhouses, waterfalls, and the beauty of nature' },
-  ]);
-
-  const [currentCategory, setCurrentCategory] = useState(categories[0]);
-
-  const [contactSelected, setContactSelected] = useState(false);
-
   return (
-    <div>
-      <Nav
-        categories={categories}
-        setCurrentCategory={setCurrentCategory}
-        currentCategory={currentCategory}
-        contactSelected={contactSelected}
-        setContactSelected={setContactSelected}
-      ></Nav>
-      <main>
-        {!contactSelected ? (
-          <>
-            <Gallery currentCategory={currentCategory}></Gallery>
-            <About></About>
-          </>
-        ) : (
-          <ContactForm></ContactForm>
-        )}
-      </main>
-    </div>
+    <ApolloProvider client={client}>
+      <Router>
+        <div>
+          <StoreProvider>
+            <Nav />
+            <Routes>
+              <Route 
+                path="/" 
+                element={<Home />} 
+              />
+              <Route 
+                path="/login" 
+                element={<Login />} 
+              />
+              <Route 
+                path="/signup" 
+                element={<Signup />} 
+              />
+              <Route 
+                path="/orderHistory" 
+                element={<OrderHistory />} 
+              />
+              <Route 
+                path="/products/:id" 
+                element={<Detail />} 
+              />
+              <Route 
+                path="*" 
+                element={<NoMatch />} 
+              />
+            </Routes>
+          </StoreProvider>
+        </div>
+      </Router>
+    </ApolloProvider>
   );
 }
 
